@@ -83,6 +83,11 @@ def main():
     parser.add_argument('--tenants', metavar='TENANT1,...,TENANTn', type=str,
                         help='list of comma-separated tenants to scan,'
                              ' defaults to all')
+    parser.add_argument('--quick', action='store_true',
+                        help='Don\'t browse files, only use containers meta'
+                             ' data (includes container size and number of'
+                             ' objects). When using this option, container\'s'
+                             ' min and max object size will not be reported.')
 
     args = parser.parse_args()
     (admin_tenant, admin_user) = args.tenant_user.split(':')
@@ -127,8 +132,13 @@ def main():
         except(AttributeError, IndexError):
             email = "None"
         try:
-            pile.spawn(swstat.retrieve_account_stats, tenant,
-                       bare_storage_url, os_options, admin_token, email)
+            if args.quick:
+                pile.spawn(swstat.quick_retrieve_account_stats, tenant,
+                           bare_storage_url, os_options, admin_token, email)
+            else:
+                pile.spawn(swstat.retrieve_account_stats, tenant,
+                           bare_storage_url, os_options, admin_token, email)
+
         except(swiftclient.client.ClientException), x:
             print x
             continue
