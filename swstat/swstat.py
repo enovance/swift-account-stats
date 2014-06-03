@@ -93,7 +93,7 @@ def _retrieve_base_account_stats(tenant,
                                os_options, admin_token)
     account_size, containers = browse_account(cnx)
     account_stats = _get_account_stats_dict(tenant, account_size,
-                                            containers, email="")
+                                            containers, email=email)
     return cnx, containers, account_stats
 
 
