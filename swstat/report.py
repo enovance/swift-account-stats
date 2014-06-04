@@ -108,7 +108,7 @@ def report_global_stats(stats, raw_output, path=None):
     o_am = total_objects_count
     o_ma_s = (len(object_sizes) == 0) and -1 or max(object_sizes)
     o_mi_s = (len(object_sizes) == 0) and -1 or min(object_sizes)
-    o_avg_s = float(t_s) / total_objects_count
+    o_avg_s = t_s / total_objects_count
     parsed_stats = dict([('account_amount', a_am),
                         ('account_max_size', a_ma_s),
                         ('account_min_size', a_mi_s),

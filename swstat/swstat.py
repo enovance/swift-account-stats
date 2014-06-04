@@ -135,7 +135,7 @@ def quick_retrieve_account_stats(*args, **kwargs):
     for cont in containers:
         name = cont['name'].encode('utf-8') if isinstance(
             cont['name'], unicode) else cont['name']
-        obj_avg = float(cont['bytes']) / cont['count'] \
+        obj_avg = cont['bytes'] / cont['count'] \
                   if cont['count'] != 0 else None
         container_details = {'container_name': name,
                              'container_size': cont['bytes'],
