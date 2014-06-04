@@ -30,9 +30,8 @@ except ImportError:
 def browse_account(cnx):
     head, containers = cnx.get_account(full_listing=True)
     account_size = int(head['x-account-bytes-used'])
-    container_names = [cont['name'] for cont in containers]
-    container_sizes = [int(cont['bytes']) for cont in containers]
-    return account_size, container_names, container_sizes
+    # containers is a list of dicts('count', 'bytes', 'name')
+    return account_size, containers
 
 
 def browse_container(cnx, container):
@@ -48,27 +47,28 @@ def browse_container(cnx, container):
     return container_size, object_names, object_sizes
 
 
-def retrieve_account_stats(tenant,
-                           bare_storage_url,
-                           os_options,
-                           admin_token,
-                           email=""):
+def _get_swift_connexion(tenant,
+                         bare_storage_url,
+                         os_options,
+                         admin_token):
     tenant_storage_url = bare_storage_url + tenant.id
-    cnx = swiftclient.client.Connection(
+    return swiftclient.client.Connection(
         authurl=None, user=None, key=None,
         preauthurl=tenant_storage_url,
         os_options=os_options,
         preauthtoken=admin_token,
         retries=MAX_RETRIES)
 
-    account_size, container_names, container_sizes = browse_account(cnx)
+
+def _get_account_stats_dict(tenant, account_size, containers, email=""):
+    container_sizes = [int(cont['bytes']) for cont in containers]
     mi = None
     ma = None
     av = None
-    if container_names:
+    if containers:
         mi = min(container_sizes)
         ma = max(container_sizes)
-        av = sum(container_sizes) / len(container_names)
+        av = sum(container_sizes) / len(containers)
     if isinstance(tenant.name, unicode):
         name = tenant.name.encode('utf-8')
     else:
@@ -76,20 +76,39 @@ def retrieve_account_stats(tenant,
     account_stats = {'account_name': name,
                      'account_id': tenant.id,
                      'account_size': account_size,
-                     'container_amount': len(container_names),
+                     'container_amount': len(containers),
                      'container_max_size': ma,
                      'container_min_size': mi,
                      'container_avg_size': av,
                      'email': email}
+    return account_stats
+
+
+def _retrieve_base_account_stats(tenant,
+                                 bare_storage_url,
+                                 os_options,
+                                 admin_token,
+                                 email=""):
+    cnx = _get_swift_connexion(tenant, bare_storage_url,
+                               os_options, admin_token)
+    account_size, containers = browse_account(cnx)
+    account_stats = _get_account_stats_dict(tenant, account_size,
+                                            containers, email=email)
+    return cnx, containers, account_stats
+
+
+def retrieve_account_stats(*args, **kwargs):
+    cnx, containers, account_stats = _retrieve_base_account_stats(
+        *args, **kwargs)
 
     containers_stats = []
-    for container in container_names:
-        container_size, object_names, \
-            object_sizes = browse_container(cnx, container)
-        if isinstance(container, unicode):
-            name = container.encode('utf-8')
+    for container in containers:
+        container_size, object_names, object_sizes = \
+            browse_container(cnx, container['name'])
+        if isinstance(container['name'], unicode):
+            name = container['name'].encode('utf-8')
         else:
-            name = container
+            name = container['name']
         mi = None
         ma = None
         av = None
@@ -104,5 +123,26 @@ def retrieve_account_stats(tenant,
                              'object_max_size': ma,
                              'object_min_size': mi,
                              'object_avg_size': av}
+        containers_stats.append(container_details)
+    return account_stats, containers_stats
+
+
+def quick_retrieve_account_stats(*args, **kwargs):
+    cnx, containers, account_stats = _retrieve_base_account_stats(
+        *args, **kwargs)
+
+    containers_stats = []
+    for cont in containers:
+        name = cont['name'].encode('utf-8') if isinstance(
+            cont['name'], unicode) else cont['name']
+        obj_avg = cont['bytes'] / cont['count'] \
+                  if cont['count'] != 0 else None
+        container_details = {'container_name': name,
+                             'container_size': cont['bytes'],
+                             'object_sizes': [],
+                             'object_amount': cont['count'],
+                             'object_max_size': None,
+                             'object_min_size': None,
+                             'object_avg_size': obj_avg}
         containers_stats.append(container_details)
     return account_stats, containers_stats

@@ -81,6 +81,7 @@ def report_global_stats(stats, raw_output, path=None):
                'container_avg_size', 'object_amount', 'object_max_size',
                'object_min_size', 'object_avg_size')
     account_sizes = []
+    total_objects_count = 0
     container_sizes = []
     object_sizes = []
     a_am = 0
@@ -96,6 +97,7 @@ def report_global_stats(stats, raw_output, path=None):
             c_am += 1
             container_sizes.append(cstat['container_size'])
             object_sizes.extend(cstat['object_sizes'])
+            total_objects_count += cstat['object_amount']
     a_ma_s = (len(account_sizes) == 0) and -1 or max(account_sizes)
     a_mi_s = (len(account_sizes) == 0) and -1 or min(account_sizes)
     a_avg_s = (len(account_sizes) == 0) and -1 or (sum(account_sizes) / a_am)
@@ -103,15 +105,16 @@ def report_global_stats(stats, raw_output, path=None):
     c_mi_s = (len(container_sizes) == 0) and -1 or min(container_sizes)
     c_avg_s = (len(container_sizes) == 0) and -1 or \
               (sum(container_sizes) / c_am)
-    o_am = len(object_sizes)
+    o_am = total_objects_count
     o_ma_s = (len(object_sizes) == 0) and -1 or max(object_sizes)
     o_mi_s = (len(object_sizes) == 0) and -1 or min(object_sizes)
-    o_avg_s = (len(object_sizes) == 0) and -1 or (sum(object_sizes) / o_am)
+    o_avg_s = t_s / total_objects_count
     parsed_stats = dict([('account_amount', a_am),
                         ('account_max_size', a_ma_s),
                         ('account_min_size', a_mi_s),
                         ('account_avg_size', a_avg_s),
-                        ('total_size', t_s), ('container_amount', c_am),
+                        ('total_size', t_s),
+                        ('container_amount', c_am),
                         ('container_max_size', c_ma_s),
                         ('container_min_size', c_mi_s),
                         ('container_avg_size', c_avg_s),
